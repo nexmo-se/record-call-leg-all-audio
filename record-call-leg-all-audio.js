@@ -80,25 +80,6 @@ app.post('/event', (req, res) => {
 
   res.status(200).send('Ok');
 
-  // if (req.body.status != undefined){
-  //   console.log("status:", req.body.status);
-
-  //   if (req.body.status == 'answered') {  // first leg (incoming call)
-
-  //     const uuid = req.body.uuid;
-
-  //     //-- play MoH to first (incoming) call leg
-  //     console.log("call leg uuid:", uuid);
-
-  //     // this is just a placeholder audio file for demo purpose
-  //     // you MUST USE a Music on Hold audio file you have license or legal usage rights
-  //     vonage.voice.streamAudio(uuid, 'https://ccrma.stanford.edu/~jos/mp3/pno-cs.mp3', 0)
-  //       .then(resp => console.log(resp))
-  //       .catch(err => console.error(err));
-  //   }
-
-  // };
-
   if (req.body.type != undefined && req.body.type === 'transfer'){
 
     const hostName = req.hostname;
@@ -140,6 +121,7 @@ app.post('/event', (req, res) => {
     // }); 
 
     //- start "leg" recording - does record play TTS and stream audio file
+    //- see https://nexmoinc.github.io/conversation-service-docs/docs/api/create-recording (note: path is different in this doc)
     request.put(apiBaseUrl + '/beta/legs/' + uuid + '/recording', {
         headers: {
             'Authorization': 'Bearer ' + accessToken,
@@ -182,9 +164,9 @@ app.post('/event', (req, res) => {
         type: 'phone',
         number: serviceNumber
       },
-    advanced_machine_detection: {
+      advanced_machine_detection: {
         "behavior": "continue",
-        "mode": "detect_beep",
+        "mode": "default",
         "beep_timeout": 45
       },
       ringing_timer: 60,
