@@ -55,18 +55,12 @@ app.use(bodyParser.json());
 
 app.get('/answer', (req, res) => {
 
-    const hostName = req.hostname;
-
-    const uuid = req.query.uuid;
-
-    //----------
-
     let nccoResponse = [
         {
           "action": "conversation",
           "endOnExit": true,
           "startOnEnter":true,
-          "name": "conference_" + uuid
+          "name": "conference_" + req.query.uuid
         }
       ];
 
