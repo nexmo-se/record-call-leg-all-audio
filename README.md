@@ -30,7 +30,7 @@ it plays TTS to the caller,<br>
 it calls a second PSTN party, instead your application could establish a WebSocket leg to your middleware,<br>
 both legs are dropped into a unique named conference,<br>
 each party on each leg may speak to the other party on the other leg and both can hear each other,<br>
-your application will get the full audio recording including play TTS and stream audio file and text transcript of each call under the folder 'post-call-data'.
+your application will get the full 2-channel (stereo) audio recording including play TTS and stream audio file and text transcript of each call under the folder 'post-call-data'.
 
 Although this sample code has been written using the Vonage Voice API Node.js SDK, the same call flows would be the same with any other Vonage Voice API SDK programming language, including using direct API calls.
 
