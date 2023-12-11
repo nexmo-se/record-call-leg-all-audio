@@ -1,0 +1,21 @@
+{
+  "name": "Record all audio on a call leg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "record-call-leg-all-audio.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tony Chan",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@vonage/server-sdk": "^3.10.2",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "request": "^2.88.2"
+  },
+  "engines": {
+    "node": "16.15"
+  }
+}
