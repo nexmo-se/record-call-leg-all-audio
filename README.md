@@ -1,4 +1,4 @@
-# Vonage APIs Application - Record all audio on a call leg
+# Vonage Voice API - How to record all audio on a call leg
 
 ## Set up
 
