@@ -8,7 +8,7 @@ Have Node.js installed on your system, this application has been tested with Nod
 Install node modules with the command "npm install"<br>
 Start application with the command "node record-call-leg-all-audio"<br>
 
-In your account at dashboard.nexmo.com,<br>
+Access your account on dashboard.nexmo.com,<br>
 edit the application associated to this server code,<br>
 enable "RTC (In-app voice & messaging)", and set the corresponding webhook URL, then [Save changes].<br>
 
