@@ -87,8 +87,6 @@ app.post('/event', (req, res) => {
     const conversationUuid = req.body.conversation_uuid_to;
     const uuid = req.body.uuid;
 
-    // const accessToken = tokenGenerate(process.env.APP_ID, './.private.key', {});
-
     const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
 
     //- start "conference" recording - does not record play TTS or stream audio file
