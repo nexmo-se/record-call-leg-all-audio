@@ -35,17 +35,23 @@ const credentials = new Auth({
   privateKey: './.private.key'
 });
 
-const options = {};
+// sample API endpoint value, set the relevant one for your own application
+const apiRegion = "https://api-us-4.vonage.com";  // must be consistent with the corresponding application's "Region" paremeter value (dashboard.nexmo.com)
+
+const options = {
+  apiHost: apiRegion
+};
 
 const { Vonage } = require('@vonage/server-sdk');
 
 const vonage = new Vonage(credentials, options);
 
+const vonageNr = new Vonage(credentials, {} );  
+
+
 const privateKey = fs.readFileSync('./.private.key');
 
 const { tokenGenerate } = require('@vonage/jwt');
-
-const apiBaseUrl = 'https://api.nexmo.com';
 
 //==========================================================
 
@@ -55,12 +61,18 @@ app.use(bodyParser.json());
 
 app.get('/answer', (req, res) => {
 
+    const hostName = req.hostname;
+
+    const uuid = req.query.uuid;
+
+    //----------
+
     let nccoResponse = [
         {
           "action": "conversation",
           "endOnExit": true,
           "startOnEnter":true,
-          "name": "conference_" + req.query.uuid
+          "name": "conference_" + uuid
         }
       ];
 
@@ -74,6 +86,24 @@ app.post('/event', (req, res) => {
 
   res.status(200).send('Ok');
 
+  if (req.body.status != undefined){
+    console.log("status:", req.body.status);
+
+    if (req.body.status == 'answered') {  // first leg (incoming call)
+
+      const uuid = req.body.uuid;
+
+      //-- play MoH to first (incoming) call leg
+      console.log("call leg uuid:", uuid);
+
+      // you must use a Music on Hold audio file you have license or legal usage rights
+      vonage.voice.streamAudio(uuid, 'https://ccrma.stanford.edu/~jos/mp3/pno-cs.mp3', 0)
+        .then(resp => console.log(resp))
+        .catch(err => console.error(err));
+    }
+
+  };
+
   if (req.body.type != undefined && req.body.type === 'transfer'){
 
     const hostName = req.hostname;
@@ -83,38 +113,8 @@ app.post('/event', (req, res) => {
 
     const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
 
-    //- start "conference" recording - does not record play TTS or stream audio file
-    // request.put(apiBaseUrl + '/v1/conversations/' + conversationUuid + '/record', {
-    //     headers: {
-    //         'Authorization': 'Bearer ' + accessToken,
-    //         "content-type": "application/json",
-    //     },
-    //     body: {
-    //       "action": "start",
-    //       "event_url": ['https://' + hostName + '/recording?uuid=' + conversationUuid],
-    //       "event_method": "POST",
-    //       "split": "conversation",
-    //       "channels": 2,
-    //       "format": "mp3",
-    //       "transcription": {
-    //         "event_url": ["https://" + hostName + "/transcription?uuid=" + conversationUuid],
-    //         "event_method": "POST",
-    //         "language":"en-US"
-    //         }
-    //     },
-    //     json: true,
-    //   }, function (error, response, body) {
-    //     if (error) {
-    //       console.log('error start recording:', error);
-    //     }
-    //     else {
-    //       console.log('response:', response);
-    //     }
-    // }); 
-
-    //- start "leg" recording - does record play TTS and stream audio file
-    //- see https://nexmoinc.github.io/conversation-service-docs/docs/api/create-recording (note: path is different in this doc)
-    request.put(apiBaseUrl + '/beta/legs/' + uuid + '/recording', {
+    //-- start "leg" recording --
+    request.post(apiRegion + '/v1/legs/' + uuid + '/recording', {
         headers: {
             'Authorization': 'Bearer ' + accessToken,
             "content-type": "application/json",
@@ -141,10 +141,7 @@ app.post('/event', (req, res) => {
         }
     }); 
 
-    //--- establish 2nd leg
-    //-- e.g. PSTN call (this sample code)
-    //-- or WebSocket to your middleware platform
-    
+    //-- call other party -- instead of a PSTN call, it could be a WebSocket connection to your ASR / Voice bot engine
     console.log("Now calling", calleeNumber, "with", serviceNumber, "as caller-ID number.");
 
     vonage.voice.createOutboundCall({
@@ -156,11 +153,11 @@ app.post('/event', (req, res) => {
         type: 'phone',
         number: serviceNumber
       },
-      advanced_machine_detection: {
-        "behavior": "continue",
-        "mode": "default",
-        "beep_timeout": 45
-      },
+      // advanced_machine_detection: {
+      //   "behavior": "continue",
+      //   "mode": "default",
+      //   "beep_timeout": 45
+      // },
       ringing_timer: 60,
       answer_url: ['https://' + hostName + '/answer2?original_uuid=' + uuid],
       answer_method: 'GET',
@@ -170,17 +167,9 @@ app.post('/event', (req, res) => {
       .then(resp => console.log(resp))
       .catch(err => console.error(err));
 
-    //-- play MoH to first (incoming) call leg
 
-    // this is just a placeholder audio file for demo purpose
-    // you MUST USE a Music on Hold audio file you have license or legal usage rights
-
-    vonage.voice.streamAudio(uuid, 'https://ccrma.stanford.edu/~jos/mp3/pno-cs.mp3', 0)
-      .then(resp => console.log(resp))
-      .catch(err => console.error(err));
-
-
-    setTimeout( () => {
+    // stop MoH  
+    setTimeout( () => {  
 
       vonage.voice.stopStreamAudio(uuid)
         .then(resp => console.log(resp))
@@ -188,8 +177,7 @@ app.post('/event', (req, res) => {
 
     }, 4000);
 
-    //-- play TTS to first (incoming) call leg
-
+    //-- play TTS to first (incoming) PSTN call leg
     setTimeout( () => {
 
       vonage.voice.playTTS(uuid,  
@@ -218,9 +206,9 @@ app.get('/answer2', (req, res) => {
     let nccoResponse = [
         {
           "action": "conversation",
-          "endOnExit": true,  // keep for a PSTN leg, not necessary for a WebSocket leg
+          "endOnExit": true,
           "startOnEnter":true,
-          "name": "conference_" + originalUuid  // put 2nd leg into same named conference
+          "name": "conference_" + originalUuid
         }
       ];
 
@@ -238,28 +226,6 @@ app.post('/event2', (req, res) => {
 
 //-------------------
 
-// called on record conversation, not on record call leg
-app.post('/recording', async(req, res) => {
-
-  res.status(200).send('Ok');
-
-  await vonage.voice.downloadRecording(req.body.recording_url, './post-call-data/' + req.query.uuid + '.mp3');
-
-});
-
-//-------------------
-
-// called on record conversation, not on record call leg
-app.post('/transcription', async(req, res) => {
-
-  res.status(200).send('Ok');
-
-  await vonage.voice.downloadTranscription(req.body.transcription_url, './post-call-data/' + req.query.uuid + '.txt');  
-
-});
-
-//-------------------
-
 app.post('/rtc', async(req, res) => {
 
   res.status(200).send('Ok');
@@ -271,7 +237,7 @@ app.post('/rtc', async(req, res) => {
       console.log('req.body.body.destination_url', req.body.body.destination_url);
       console.log('req.body.body.recording_id', req.body.body.recording_id);
 
-      await vonage.voice.downloadRecording(req.body.body.destination_url, './post-call-data/' + req.body.body.recording_id + '_' + req.body.body.channel.id + '.mp3');
+      await vonageNr.voice.downloadRecording(req.body.body.destination_url, './post-call-data/' + req.body.body.recording_id + '_' + req.body.body.channel.id + '.mp3');
  
       break;
 
@@ -280,7 +246,7 @@ app.post('/rtc', async(req, res) => {
       console.log('req.body.body.transcription_url', req.body.body.transcription_url);
       console.log('req.body.body.recording_id', req.body.body.recording_id);
 
-      await vonage.voice.downloadTranscription(req.body.body.transcription_url, './post-call-data/' + req.body.body.recording_id + '.txt');  
+      await vonageNr.voice.downloadTranscription(req.body.body.transcription_url, './post-call-data/' + req.body.body.recording_id + '.txt');  
 
       break;      
     
