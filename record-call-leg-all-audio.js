@@ -53,6 +53,13 @@ const privateKey = fs.readFileSync('./.private.key');
 
 const { tokenGenerate } = require('@vonage/jwt');
 
+//--
+
+// const apiBaseUrl = "https://api.vonage.com";
+const apiBaseUrl = "https://api-us.vonage.com";
+// const apiBaseUrl = "https://api-eu.vonage.com";
+// const apiBaseUrl = "https://api-ap.vonage.com";
+
 //==========================================================
 
 app.use(bodyParser.json());
@@ -93,6 +100,67 @@ app.post('/event', (req, res) => {
 
       const uuid = req.body.uuid;
 
+      const convId = req.body.conversation_uuid;
+
+      const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
+
+      //-- get leg status --
+          request.get(apiRegion + '/v1/legs?conversation_id=' + convId, {
+          headers: {
+              'Authorization': 'Bearer ' + accessToken,
+              "content-type": "application/json",
+          },
+          json: true,
+        }, function (error, response, body) {
+          if (error) {
+            // console.log('>>> error get leg', convId, 'status:', error);
+            console.log('>>> error get leg with conv ID:', convId, error.body);
+          }
+          else {
+            // console.log('>>> call leg', convId, 'status:', response);
+            console.log('>>> get leg with conv ID:', convId, response.body);
+            console.log('>>> get leg details with conv ID:', convId, response.body._embedded.legs);
+          }
+      }); 
+
+      //--- get legs with status answered ---
+
+      request.get(apiRegion + '/v1/legs?status=answered', {
+          headers: {
+              'Authorization': 'Bearer ' + accessToken,
+              "content-type": "application/json",
+          },
+          json: true,
+        }, function (error, response, body) {
+          if (error) {
+            // console.log('>>> error get leg', convId, 'status:', error);
+            console.log('>>> error get legs:', error.body);
+          }
+          else {
+            // console.log('>>> call leg', convId, 'status:', response);
+            console.log('>>> get legs status answered:', response.body._embedded.legs);
+          }
+      });
+
+      //--- get calls ---
+
+      request.get(apiRegion + '/v1/calls?status=answered', {
+          headers: {
+              'Authorization': 'Bearer ' + accessToken,
+              "content-type": "application/json",
+          },
+          json: true,
+        }, function (error, response, body) {
+          if (error) {
+            // console.log('>>> error get leg', convId, 'status:', error);
+            console.log('>>> error get calls:', error.body);
+          }
+          else {
+            // console.log('>>> call leg', convId, 'status:', response);
+            console.log('>>> get calls with status answered:', response.body._embedded.calls);
+          }
+      });     
+   
       //-- play MoH to first (incoming) call leg
       console.log("call leg uuid:", uuid);
 
@@ -114,7 +182,8 @@ app.post('/event', (req, res) => {
     const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
 
     //-- start "leg" recording --
-    request.post(apiRegion + '/v1/legs/' + uuid + '/recording', {
+    // request.post(apiRegion + '/v1/legs/' + uuid + '/recording', {
+    request.post(apiBaseUrl + '/v1/legs/' + uuid + '/recording', {
         headers: {
             'Authorization': 'Bearer ' + accessToken,
             "content-type": "application/json",
@@ -134,12 +203,35 @@ app.post('/event', (req, res) => {
         json: true,
       }, function (error, response, body) {
         if (error) {
-          console.log('error start recording:', error);
+          console.log('error start recording:', error.body);
         }
         else {
-          console.log('response:', response);
+          console.log('start recording response:', response.body);
         }
-    }); 
+    });
+
+    //------------------------
+
+    setTimeout
+
+    // //--- get leg status ---
+
+    // request.get(apiRegion + '/v1/legs?status=answered', {
+    //     headers: {
+    //         'Authorization': 'Bearer ' + accessToken,
+    //         "content-type": "application/json",
+    //     },
+    //     json: true,
+    //   }, function (error, response, body) {
+    //     if (error) {
+    //       // console.log('>>> error get leg', convId, 'status:', error);
+    //       console.log('>>> error get legs:', error.body);
+    //     }
+    //     else {
+    //       // console.log('>>> call leg', convId, 'status:', response);
+    //       console.log('>>> get legs status answered:', response.body._embedded.legs);
+    //     }
+    // }); 
 
     //-- call other party -- instead of a PSTN call, it could be a WebSocket connection to your ASR / Voice bot engine
     console.log("Now calling", calleeNumber, "with", serviceNumber, "as caller-ID number.");
@@ -221,6 +313,62 @@ app.get('/answer2', (req, res) => {
 app.post('/event2', (req, res) => {
 
   res.status(200).send('Ok');
+
+  if (req.body.status != undefined){
+  console.log("status:", req.body.status);
+
+    if (req.body.status == 'answered') {  // first leg (incoming call)
+
+      const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
+
+      //--- get calls ---
+
+      request.get(apiRegion + '/v1/calls?status=answered', {
+          headers: {
+              'Authorization': 'Bearer ' + accessToken,
+              "content-type": "application/json",
+          },
+          json: true,
+        }, function (error, response, body) {
+          if (error) {
+            console.log('>>> error get calls:', error.body);
+          }
+          else {
+            console.log('>>> get calls with status answered:', response.body._embedded.calls);
+          }
+      });
+
+    }
+
+  }
+
+  //---
+
+  if (req.body.type != undefined && req.body.type === 'transfer'){
+
+    //--- get calls ---
+
+    const accessToken = tokenGenerate(process.env.APP_ID, privateKey, {});
+
+    request.get(apiRegion + '/v1/calls?status=answered', {
+        headers: {
+            'Authorization': 'Bearer ' + accessToken,
+            "content-type": "application/json",
+        },
+        json: true,
+      }, function (error, response, body) {
+        if (error) {
+          console.log('>>> error get calls:', error.body);
+        }
+        else {
+          console.log('>>> get calls with status answered - after named conference:', response.body._embedded.calls);
+        }
+    });
+
+
+  }  
+
+
 
 });
 
