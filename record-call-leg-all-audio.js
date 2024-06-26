@@ -212,8 +212,6 @@ app.post('/event', (req, res) => {
 
     //------------------------
 
-    setTimeout
-
     // //--- get leg status ---
 
     // request.get(apiRegion + '/v1/legs?status=answered', {
